@@ -1,22 +1,26 @@
 This Python script records audio from a specified URL in chunks and transcribes the audio using OpenAI's transcription API. The transcriptions are saved to a file called transcriptions.txt.
 
-Prerequisites
+**Prerequisites**
 
 Python 3.x
 ffmpeg installed on your system
 An OpenAI API key
-Usage
 
-Clone or download the script.
-Install the required Python modules by running pip install openai.
-Set your OpenAI API key in the OPENAI_API_KEY variable.
-Set the chunk length in seconds using the CHUNK_LENGTH variable.
-Set the name of the output directory using the OUTPUT_DIR variable.
-Set the output file format using the FORMAT variable.
-Set the OpenAI transcription model using the MODEL variable.
-Run the script by executing python audio_transcription.py in your terminal.
-Enter the input URL when prompted.
-Script Flow
+
+**Usage**
+
+  Clone or download the script.
+  Install the required Python modules by running pip install openai.
+  Set your OpenAI API key in the OPENAI_API_KEY variable.
+  Set the chunk length in seconds using the CHUNK_LENGTH variable.
+  Set the name of the output directory using the OUTPUT_DIR variable.
+  Set the output file format using the FORMAT variable.
+  Set the OpenAI transcription model using the MODEL variable.
+  Run the script by executing python audio_transcription.py in your terminal.
+  Enter the input URL when prompted.
+
+
+**Script Flow**
 
 The script starts by checking if the output directory exists. If it doesn't, the script creates the directory.
 The script prompts the user to enter the input URL.
