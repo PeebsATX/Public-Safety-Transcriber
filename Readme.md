@@ -16,7 +16,7 @@ An OpenAI API key
   Set the name of the output directory using the OUTPUT_DIR variable.
   Set the output file format using the FORMAT variable.
   Set the OpenAI transcription model using the MODEL variable.
-  Run the script by executing python audio_transcription.py in your terminal.
+  Run the script by executing python3 live.py in your terminal.
   Enter the input URL when prompted.
 
 
