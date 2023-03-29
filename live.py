@@ -5,7 +5,7 @@ import openai
 import threading
 
 # Set your OpenAI API key here
-OPENAI_API_KEY = "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"
+OPENAI_API_KEY = "your_open_api_key"
 
 # Create a new OpenAI API instance
 openai.api_key = OPENAI_API_KEY
