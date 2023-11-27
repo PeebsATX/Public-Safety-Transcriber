@@ -1,75 +1,62 @@
 import subprocess
 import os
 import time
-import openai
-import threading
+from openai import OpenAI
+from threading import Thread
+from queue import Queue
 
-# Set your OpenAI API key here
-OPENAI_API_KEY = "your_open_api_key"
+def transcribe_audio(client, file_path):
+    with open(file_path, "rb") as audio_file:
+        transcript = client.audio.transcriptions.create(
+            model="whisper-1",
+            file=audio_file,
+            response_format="text"
+        )
+    return transcript
 
-# Initialize the OpenAI API instance
-openai.api_key = OPENAI_API_KEY
+def record_stream(url, chunk_length, queue, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-# Set the chunk length in seconds
-CHUNK_LENGTH = 120
+    file_index = 0
+    while True:
+        filename = os.path.join(output_dir, f"chunk_{file_index:04d}.mp3")
+        # Record approximately chunk_length seconds of data
+        cmd = [
+            "ffmpeg", "-y", "-i", url, 
+            "-t", str(chunk_length), 
+            "-acodec", "mp3", 
+            filename
+        ]
+        subprocess.run(cmd, check=True)
+        queue.put(filename)
+        file_index += 1
 
-# Set the name of the output directory
-OUTPUT_DIR = "output"
+def process_chunks(client, queue):
+    while True:
+        file_path = queue.get()
+        transcript = transcribe_audio(client, file_path)
+        print(f"Transcription of {file_path}:\n{transcript}")
+        os.remove(file_path)  # Remove file after processing
 
-# Create the output directory if it does not exist
-if not os.path.exists(OUTPUT_DIR):
-    os.makedirs(OUTPUT_DIR)
+def main():
+    client = OpenAI()  # Initialize the OpenAI client
+    stream_url = input("Enter the Icecast stream URL: ")
+    chunk_length = 120  # Length of each audio chunk in seconds
+    output_dir = "recorded_chunks"
 
-# Set the format for the output files
-FORMAT = "mp3"
+    queue = Queue()
+    record_thread = Thread(target=record_stream, args=(stream_url, chunk_length, queue, output_dir))
+    process_thread = Thread(target=process_chunks, args=(client, queue))
 
-# Set the OpenAI transcription model
-MODEL = "whisper-1"
+    record_thread.start()
+    process_thread.start()
 
-# Prompt the user for the input URL
-input_url = input("Enter the input URL: ")
+    try:
+        record_thread.join()
+        process_thread.join()
+    except KeyboardInterrupt:
+        print("Transcription process stopped.")
 
-# Function to transcribe a chunk of audio
-def transcribe_chunk(filename, chunk_count, done_event):
-    with open(filename, "rb") as f:
-        response = openai.Audio.transcribe(MODEL, f)
-        transcription = response["text"]
-
-    print(f"Chunk {chunk_count}: {transcription}")
-
-    # Write the transcription to the 'transcriptions.txt' file
-    with open(os.path.join(OUTPUT_DIR, "transcriptions.txt"), "a") as transcription_file:
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(chunk_count * CHUNK_LENGTH))
-        transcription_file.write(f"Chunk {chunk_count} - Timestamp: {timestamp}\n{transcription}\n\n")
-
-    # Signal that transcription is done
-    done_event.set()
-
-# Start recording chunks of audio
-chunk_count = 0
-transcription_threads = []
-while True:
-    # Generate the filename for the current chunk
-    filename = os.path.join(OUTPUT_DIR, f"chunk{chunk_count:04d}.{FORMAT}")
-
-    # Record the next chunk of audio
-    cmd = ["ffmpeg", "-y", "-i", input_url, "-t", str(CHUNK_LENGTH), "-acodec", "copy", filename]
-    subprocess.Popen(cmd)
-
-    # Create an event object to signal thread completion
-    done_event = threading.Event()
-    transcription_thread = threading.Thread(target=transcribe_chunk, args=(filename, chunk_count, done_event))
-    transcription_thread.start()
-    transcription_threads.append((transcription_thread, done_event))
-
-    # Check and remove threads that have completed
-    for t, event in transcription_threads:
-        if event.is_set():
-            t.join()
-            transcription_threads.remove((t, event))
-
-    # Increment the chunk counter
-    chunk_count += 1
-
-    # Wait a bit before starting the next recording to avoid overlap
-    time.sleep(CHUNK_LENGTH)
+if __name__ == "__main__":
+    main()
